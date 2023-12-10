@@ -1,11 +1,22 @@
 <?php declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
-use CliBuilder;
+use leinadalrus\CliBuilder;
 
-final class UserUploadTest extends TestCase
+final class TestCliBuild extends TestCase
 {
-  private $behaviour_handler;
+  private $cli_builder = NULL;
+  private $behaviour_handler = NULL;
+
+  function test_cli_build($_cli_builder)
+  {
+    $_cli_builder = new CliBuilder();
+    $this->cli_builder = $_cli_builder;
+
+    $this->cli_builder->set_username("admin");
+    $this->cli_builder->set_password("root");
+    $this->cli_builder->set_hostname("localhost");
+  }
 
   public function test_database_getter($_behaviour_handler_copy)
   {
@@ -13,8 +24,8 @@ final class UserUploadTest extends TestCase
     $_behaviour_handler_copy = new CliBuilder();
     $this->behaviour_handler = $_behaviour_handler_copy;
 
-    $database = $this->behaviour_handler->get_database();
-    $this->assertSame($database, "users");
+    $database = $this->behaviour_handler->get_hostname();
+    $this->assertSame($database, "localhost");
   }
 
   public function test_database_setter($_behaviour_handler_copy)
@@ -23,8 +34,8 @@ final class UserUploadTest extends TestCase
     $_behaviour_handler_copy = new CliBuilder();
     $this->behaviour_handler = $_behaviour_handler_copy;
 
-    $this->behaviour_handler->set_database("users");
-    $this->assertSame($this->behaviour_handler->get_database(), "admin");
+    $this->behaviour_handler->set_hostname("localhost");
+    $this->assertSame($this->behaviour_handler->get_hostname(), "admin");
   }
 
   public function test_username_getter($_behaviour_handler_copy)
@@ -65,9 +76,5 @@ final class UserUploadTest extends TestCase
 
     $this->behaviour_handler->set_password("root");
     $this->assertSame($this->behaviour_handler->get_password(), "root");
-  }
-
-  public function test_build_cli_instr($_behaviour_handler_copy)
-  {
   }
 }
