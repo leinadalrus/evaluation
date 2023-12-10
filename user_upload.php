@@ -64,7 +64,7 @@ class CliBuilder
     mysqli_query($my_connection,
       "LOAD DATA INFILE \"users.csv\" 
       INTO TABLE users FIELDS TERMINATED BY \",\" 
-      ENCLOSED BY '\"' LINES TERMINATED BY \"\n\" IGNORE 1 ROWS");
+      ENCLOSED BY '\"' LINES TERMINATED BY \"\n\" IGNORE 1 ROWS") 
       or die("SQL Query to select from table: Users, failed...");
 
     mysqli_close($my_connection);
@@ -93,9 +93,9 @@ class CliBuilder
         preg_match($valid_email_regex,
           $key_value, $captured_arr,
           PREG_OFFSET_CAPTURE);
-        preg_match($lowercase_regex, 
-          $key_value, 
-          $captured_arr, 
+        preg_match($lowercase_regex,
+          $key_value,
+          $captured_arr,
           PREG_OFFSET_CAPTURE);
       }
 
