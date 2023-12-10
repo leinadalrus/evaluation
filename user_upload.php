@@ -1,28 +1,17 @@
 <?php
+declare(strict_types=1);
+
+use PHPUnit\Framework\TestCase;
+
 class CliBuilder
 {
-  private $database = "localhost";
-  private $username = "danieldavid";
-  private $password = "johnDoe1!";
+  private $username = "admin";
+  private $password = "root";
+  private $hostname = "localhost";
 
-  public function set_database($database)
+  public function get_hostname()
   {
-    $this->database = $database;
-  }
-
-  public function set_username($username)
-  {
-    $this->username = $username;
-  }
-
-  public function set_password($password)
-  {
-    $this->password = $password;
-  }
-
-  public function get_database()
-  {
-    return $this->database;
+    return $this->hostname;
   }
 
   public function get_username()
@@ -34,94 +23,87 @@ class CliBuilder
   {
     return $this->password;
   }
-}
 
-function connect_to_mysqli()
-{
-  behaviour_handler = new CliBuilder(); // TODO(destroy)
+  public function set_username($_username)
+  {
+    $this->username = $_username;
+  }
 
-  $my_connection = mysqli_connect(behaviour_handler->get_database(),
-    behaviour_handler->get_username(),
-    behaviour_handler->get_password())
-    or die("MySQL connection: failed..." . mysqli_error($my_connection));
+  public function set_password($_password)
+  {
+    $this->password = $_password;
+  }
 
-  mysqli_select_db($my_connection, "users")
-    or die("MySQL: database selection failed...");
+  public function set_hostname($_hostname)
+  {
+    $this->hostname = $_hostname;
+  }
 
-  $sql_queries = mysqli_query($my_connection, "SELECT * from users")
-    or die("SQL Query to select from table: Users, failed...");
+  public function connect_to_database()
+  {
+    $behaviour_handler = new CliBuilder();
 
-  while ($rows = mysqli_fetch_array($sql_queries, MYSQL_ASSOC)) {
-    foreach ($rows as $row => $column) {
+    $my_connection = mysqli_connect($behaviour_handler->get_hostname(),
+      $behaviour_handler->get_username(),
+      $behaviour_handler->get_password())
+      or die("MySQL connection: failed..." . mysqli_error($my_connection));
+
+    mysqli_select_db($my_connection, "users")
+      or die("MySQL: database selection failed...");
+
+    $sql_queries = mysqli_query($my_connection, "SELECT * from users")
+      or die("SQL Query to select from table: Users, failed...");
+
+    while ($rows = mysqli_fetch_array($sql_queries, MYSQL_ASSOC)) {
+      foreach ($rows as $row => $column) {
+        # code...
+      }
+    }
+
+    mysqli_close($my_connection);
+  }
+
+  public function organise_user_data()
+  {
+    $csv_handler = fopen("users.csv", "r");
+    $users_data = fgetcsv($csv_handler, 1024, ",");
+
+    $lowercase_regex = "/^(?:([a-z]))$/";
+    $valid_email_regex = "^(?:[a-z+])|(?:[\W+])$";
+    $titlecase_regex = "/^(?:([A-Z]{1,1}))(?:(\w+))$/";
+
+    $captured_arr = array();
+
+    foreach ($users_data as $key_name => $key_value) {
       # code...
-    }
-  }
+      if ($key_name == "name" || $key_name == "surname")
+        preg_match($titlecase_regex, $key_value, $captured_arr, PREG_OFFSET_CAPTURE);
 
-  mysqli_close($my_connection);
-}
+      if ($key_name == "email") {
+        preg_match($valid_email_regex, $key_value, $captured_arr, PREG_OFFSET_CAPTURE);
+        preg_match($lowercase_regex, $key_value, $captured_arr, PREG_OFFSET_CAPTURE);
+      }
 
-function organise_user_csv()
-{
-  $csv_handler = fopen("users.csv", "r");
-  $users_data = fgetcsv($csv_handler, 1024, ",");
-
-  echo "Testing to see Users.csv file-contents: $users_data";
-
-  $lowercase_regex = "/^(?:([a-z]))$/";
-  $valid_email_regex = "^(?:[a-z+])|(?:[\W+])$";
-  $titlecase_regex = "/^(?:([A-Z]{1,1}))(?:(\w+))$/";
-
-  $captured_arr = array();
-
-  foreach ($users_data as $key_name => $key_value) {
-    # code...
-    if ($key_name == "name" || $key_name == "surname")
-      preg_match($titlecase_regex, $key_value, $captured_arr, PREG_OFFSET_CAPTURE);
-
-    if ($key_name == "email") {
-      preg_match($valid_email_regex, $key_value, $captured_arr, PREG_OFFSET_CAPTURE);
-      preg_match($lowercase_regex, $key_value, $captured_arr, PREG_OFFSET_CAPTURE);
+      print_r($captured_arr);
     }
 
-    print_r($captured_arr);
+    return $captured_arr;
   }
 
-  return $captured_arr;
-}
+  public function create_table()
+  {
+    $this->connect_to_database();
+    $this->organise_user_data();
+  }
 
-function create_table_with_csv()
-{
-  connect_to_mysqli();
-}
+  public function dry_run($self)
+  {
+    $self = new CliBuilder(); // destroy later
 
-function handle_stdio_filed_command($filepathn_name)
-{
-  $cstdio_output = file($filepathn_name);
-  fwrite(STDOUT, $cstdio_output);
+    $permission_mode = "r";
+    $filestream_type = "php://stdin";
+    $filestream_stdin = fopen($filestream_type, $permission_mode);
 
-  do {
-    $read_line = fgets(STDIN);
-  } while ($read_line == "");
-
-  return $read_line;
-}
-
-function behaviour_handler_sentinel($behaviour_handler_self, $user_arguments)
-{
-  $behaviour_handler_self = new CliBuilder(); // destroy later
-  $command_slices = array(
-    parse_str(
-      implode(" ", array_slice($user_arguments, 1)), $_GET
-    ),
-    array(
-      parse_str(
-        implode(" ", array_slice($user_arguments, 1)), $_GET))
-  ); // change separator for `implode` into whitespace instead of ampsersand
-
-  foreach ($command_slices as $command_args) {
-    behaviour_handler_sentinel($behaviour_handler_self, $command_args);
-
-    $command_args = strtolower($command_args);
     $help_heredoc = <<<HERE
       Run this script with the PHP CLI, in your terminal.\n
       `php --run ...`e.g:\n
@@ -133,97 +115,123 @@ function behaviour_handler_sentinel($behaviour_handler_self, $user_arguments)
       `-h` : set your MySQLi database hostname.
     HERE;
 
-    $parsed_args = array(
-      "--file" => organise_user_csv(),
-      "--create_table" => create_table_with_csv(),
-      "--dry_run" => handle_stdio_filed_command($user_arguments),
-      "-u" => $behaviour_handler_self->set_username($user_arguments),
-      "-p" => $behaviour_handler_self->set_password($user_arguments),
-      "-h" => $behaviour_handler_self->set_database($user_arguments),
-      "--help" => $help_heredoc
+    $command_arguments = array(
+      "--file" => $filestream_stdin,
+      "--create_table" => $this->create_table(),
+      "--dry_run" => $this->dry_run($self),
+      "-u" => $this->set_username($filestream_type),
+      "-p" => $this->set_password($filestream_type),
+      "-h" => $this->set_hostname($filestream_type),
+      "--help" => print_r($help_heredoc) // NOTE(): code ... fix
     );
 
-    foreach ($parsed_args as $ret_val) {
-      print_r("Parsed Argument return-value before assignment: $ret_val");
-      if ($user_arguments == $ret_val) {
-        print_r("Sanitised User Argument before re-assignment: $user_arguments");
-        $user_arguments = $ret_val;
-        print_r("Sanitised User Argument AFTER re-assignment: $user_arguments");
+    while (1) {
+      if ($filestream_stdin !== false)
+        printf($filestream_type);
+
+      if (feof(STDIN))
+        break;
+
+      switch ($command_arguments) {
+        case "--file":
+          # code...check iterable argument columns
+          print_r("Params variable before STDIO handling.");
+          printf("Please type known file-name: $filestream_type");
+
+          $filename_input = rtrim(fgets(STDIN));
+
+          print_r("Params variable AFTER STDIO handling: $filename_input");
+          break;
+
+        case "--create_table":
+          create_table_with_csv();
+          break;
+
+        case "--dry_run":
+          organise_user_csv();
+          break;
+
+        case "-u":
+          $username_beforehand = $this->get_username();
+          print_r("Username before before switch: $username_beforehand");
+
+          echo "Give us your new input for: username...";
+          $end_user_input_username = rtrim(fgets(STDIN));
+          $this->set_username($end_user_input_username);
+
+          print_r("Username before AFTER switch: $username_beforehand");
+          break;
+
+        case "-p":
+          $password_ret_val = $this->get_password();
+          print_r("Password before before switch: $password_ret_val");
+
+          echo "Give us your new input for: password...";
+          $end_user_input_password = rtrim(fgets(STDIN));
+          $this->set_username($end_user_input_password);
+
+          $this->set_password($command_arguments);
+          print_r("Password before AFTER switch: $password_ret_val");
+          break;
+
+        case "-h":
+          $database_hostname = $this->get_hostname();
+          print_r("Database hostname before before switch: $database_hostname");
+
+          echo "Give us your new input for: hostname...";
+          $end_user_input_hostname = rtrim(fgets(STDIN));
+          $this->set_username($end_user_input_hostname);
+
+          $this->set_hostname($command_arguments);
+          print_r("Database hostname before AFTER switch: $database_hostname");
+          break;
+
+        case "--help":
+          echo $help_heredoc;
+          break;
+
+        default:
+          # code...
+          break;
       }
+
     }
   }
-
-  print_r("User Command Arguments after Sentinel/Sanitisation handling: $user_arguments");
-  return $user_arguments;
 }
 
-function build_commandline_directives($user_commands)
+class TestCliBuild extends TestCase
 {
-  behaviour_handler = new CliBuilder(); // destroy later
-  $command_slices = behaviour_handler_sentinel(behaviour_handler, $user_commands);
+  private $cli_builder = NULL;
 
-  echo "Please run: `php --run --help` for additional arguments...";
+  function test_cli_build($_cli_builder)
+  {
+    $_cli_builder = new CliBuilder();
+    $this->cli_builder = $_cli_builder;
 
-  foreach ($command_slices as $command_args) {
-
-    switch ($command_args) {
-      case "--file":
-        # code...check iterable argument columns
-        print_r("Params variable before STDIO handling: $command_args");
-        handle_stdio_filed_command($command_args);
-        print_r("Params variable AFTER STDIO handling: $command_args");
-        break;
-
-      case "--create_table":
-        create_table_with_csv();
-        break;
-
-      case "--dry_run":
-        organise_user_csv();
-        break;
-
-      case "-u":
-        $username_beforehand = behaviour_handler->get_username();
-        print_r("Username before before switch: $username_beforehand");
-
-        behaviour_handler->set_username($command_args);
-        print_r("Username before AFTER switch: $username_beforehand");
-        break;
-
-      case "-p":
-        $password_ret_val = behaviour_handler->get_password();
-        print_r("Password before before switch: $password_ret_val");
-
-        behaviour_handler->set_password($command_args);
-        print_r("Password before AFTER switch: $password_ret_val");
-        break;
-
-      case "-h":
-        $database_hostname = behaviour_handler->get_database();
-        print_r("Database hostname before before switch: $database_hostname");
-
-        behaviour_handler->set_database($command_args);
-        print_r("Database hostname before AFTER switch: $database_hostname");
-        break;
-
-      case "--help":
-        $help_heredoc = <<<HERE
-        Run this script with the PHP CLI, in your terminal.\n
-        `php --run ...`e.g:\n
-        `--file` : to run a specific file,\n
-        `--create_table` : to create a MySQL table,\n
-        `--dry_run` : to solely run the script without Database Table creation,\n
-        `-u` : set your MySQLi username,\n
-        `-p` : set your MySQLi password,\n
-        `-h` : set your MySQLi database hostname.
-        HERE;
-
-        echo $help_heredoc;
-        break;
-
-      default:
-        # code...
-        break;
-    }
+    $this->cli_builder->set_username("admin");
+    $this->cli_builder->set_password("root");
+    $this->cli_builder->set_hostname("localhost");
   }
+
+  function test_username()
+  {
+    $this->assertSame($this->cli_builder->get_username(), "admin");
+  }
+
+  function test_password()
+  {
+    $this->assertSame($this->cli_builder->get_password(), "root");
+  }
+
+  function test_hostname()
+  {
+    $this->assertSame($this->cli_builder->get_hostname(), "localhost");
+  }
+}
+
+function main()
+{
+  $behaviour_handler = new CliBuilder();
+  $behaviour_handler->dry_run($behaviour_handler);
+  return 0;
 }
