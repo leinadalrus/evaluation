@@ -1,13 +1,21 @@
 <?php
 declare(strict_types=1);
 
-use PHPUnit\Framework\TestCase;
+namespace leinadalrus;
 
 class CliBuilder
 {
   private $username = "admin";
   private $password = "root";
   private $hostname = "localhost";
+
+  function __construct()
+  {
+  }
+
+  function __destruct()
+  {
+  }
 
   public function get_hostname()
   {
@@ -51,14 +59,13 @@ class CliBuilder
     mysqli_select_db($my_connection, "users")
       or die("MySQL: database selection failed...");
 
-    $sql_queries = mysqli_query($my_connection, "SELECT * from users")
-      or die("SQL Query to select from table: Users, failed...");
+    echo "Create MySQLi table: 'users', and load infile 'users.csv'";
 
-    while ($rows = mysqli_fetch_array($sql_queries, MYSQL_ASSOC)) {
-      foreach ($rows as $row => $column) {
-        # code...
-      }
-    }
+    mysqli_query($my_connection,
+      "LOAD DATA INFILE \"users.csv\" 
+      INTO TABLE users FIELDS TERMINATED BY \",\" 
+      ENCLOSED BY '\"' LINES TERMINATED BY \"\n\" IGNORE 1 ROWS");
+      or die("SQL Query to select from table: Users, failed...");
 
     mysqli_close($my_connection);
   }
@@ -77,11 +84,19 @@ class CliBuilder
     foreach ($users_data as $key_name => $key_value) {
       # code...
       if ($key_name == "name" || $key_name == "surname")
-        preg_match($titlecase_regex, $key_value, $captured_arr, PREG_OFFSET_CAPTURE);
+        preg_match($titlecase_regex,
+          $key_value,
+          $captured_arr,
+          PREG_OFFSET_CAPTURE);
 
       if ($key_name == "email") {
-        preg_match($valid_email_regex, $key_value, $captured_arr, PREG_OFFSET_CAPTURE);
-        preg_match($lowercase_regex, $key_value, $captured_arr, PREG_OFFSET_CAPTURE);
+        preg_match($valid_email_regex,
+          $key_value, $captured_arr,
+          PREG_OFFSET_CAPTURE);
+        preg_match($lowercase_regex, 
+          $key_value, 
+          $captured_arr, 
+          PREG_OFFSET_CAPTURE);
       }
 
       print_r($captured_arr);
@@ -96,14 +111,8 @@ class CliBuilder
     $this->organise_user_data();
   }
 
-  public function dry_run($self)
+  public function dry_run()
   {
-    $self = new CliBuilder(); // destroy later
-
-    $permission_mode = "r";
-    $filestream_type = "php://stdin";
-    $filestream_stdin = fopen($filestream_type, $permission_mode);
-
     $help_heredoc = <<<HERE
       Run this script with the PHP CLI, in your terminal.\n
       `php --run ...`e.g:\n
@@ -115,14 +124,18 @@ class CliBuilder
       `-h` : set your MySQLi database hostname.
     HERE;
 
+    $permission_mode = "r";
+    $filestream_type = "php://stdin";
+    $filestream_stdin = fopen($filestream_type, $permission_mode);
+
     $command_arguments = array(
       "--file" => $filestream_stdin,
       "--create_table" => $this->create_table(),
-      "--dry_run" => $this->dry_run($self),
+      "--dry_run" => $this->dry_run($this->input_interface),
       "-u" => $this->set_username($filestream_type),
       "-p" => $this->set_password($filestream_type),
       "-h" => $this->set_hostname($filestream_type),
-      "--help" => print_r($help_heredoc) // NOTE(): code ... fix
+      "--help" => print_r($help_heredoc)
     );
 
     while (1) {
@@ -136,18 +149,20 @@ class CliBuilder
         case "--file":
           # code...check iterable argument columns
           print_r("Params variable before STDIO handling.");
-          printf("Please type known file-name: $filestream_type");
 
+          echo "Please type known file-name: $filestream_type";
           $filename_input = rtrim(fgets(STDIN));
 
           print_r("Params variable AFTER STDIO handling: $filename_input");
           break;
 
         case "--create_table":
+          echo "Creating database table (with MySQLi...)";
           create_table_with_csv();
           break;
 
         case "--dry_run":
+          echo "Running: --dry_run - command...organising user data...";
           organise_user_csv();
           break;
 
@@ -194,44 +209,15 @@ class CliBuilder
           # code...
           break;
       }
-
     }
-  }
-}
-
-class TestCliBuild extends TestCase
-{
-  private $cli_builder = NULL;
-
-  function test_cli_build($_cli_builder)
-  {
-    $_cli_builder = new CliBuilder();
-    $this->cli_builder = $_cli_builder;
-
-    $this->cli_builder->set_username("admin");
-    $this->cli_builder->set_password("root");
-    $this->cli_builder->set_hostname("localhost");
-  }
-
-  function test_username()
-  {
-    $this->assertSame($this->cli_builder->get_username(), "admin");
-  }
-
-  function test_password()
-  {
-    $this->assertSame($this->cli_builder->get_password(), "root");
-  }
-
-  function test_hostname()
-  {
-    $this->assertSame($this->cli_builder->get_hostname(), "localhost");
   }
 }
 
 function main()
 {
   $behaviour_handler = new CliBuilder();
-  $behaviour_handler->dry_run($behaviour_handler);
+  $behaviour_handler->dry_run();
   return 0;
 }
+
+main();
