@@ -56,15 +56,24 @@ class CliBuilder
       $behaviour_handler->get_password())
       or die("MySQL connection: failed..." . mysqli_error($my_connection));
 
-    mysqli_select_db($my_connection, "users")
+    echo "Creating database: 'danieldb'...\nconnecting to 'danieldb'";
+
+    mysqli_query($my_connection, "CREATE DATABASE IF NOT EXISTS danieldb;")
+      or die("MySQL: database selection failed...");
+
+    mysqli_select_db($my_connection, "danieldb")
       or die("MySQL: database selection failed...");
 
     echo "Create MySQLi table: 'users', and load infile 'users.csv'";
 
     mysqli_query($my_connection,
-      "LOAD DATA INFILE \"users.csv\" 
+      "CREATE TABLE IF NOT EXISTS users(name varchar(255), surname varchar(255), email varchar(255));")
+      or die("SQL Query to select from table: Users, failed...");
+
+    mysqli_query($my_connection,
+      "LOAD DATA LOCAL INFILE \"users.csv\" 
       INTO TABLE users FIELDS TERMINATED BY \",\" 
-      ENCLOSED BY '\"' LINES TERMINATED BY \"\n\" IGNORE 1 ROWS") 
+      ENCLOSED BY '\"' LINES TERMINATED BY \"\n\" IGNORE 1 ROWS")
       or die("SQL Query to select from table: Users, failed...");
 
     mysqli_close($my_connection);
@@ -131,7 +140,7 @@ class CliBuilder
     $command_arguments = array(
       "--file" => $filestream_stdin,
       "--create_table" => $this->create_table(),
-      "--dry_run" => $this->dry_run($this->input_interface),
+      "--dry_run" => $this->dry_run(),
       "-u" => $this->set_username($filestream_type),
       "-p" => $this->set_password($filestream_type),
       "-h" => $this->set_hostname($filestream_type),
@@ -158,12 +167,12 @@ class CliBuilder
 
         case "--create_table":
           echo "Creating database table (with MySQLi...)";
-          create_table_with_csv();
+          $this->create_table();
           break;
 
         case "--dry_run":
           echo "Running: --dry_run - command...organising user data...";
-          organise_user_csv();
+          $this->organise_user_data();
           break;
 
         case "-u":
@@ -207,6 +216,8 @@ class CliBuilder
 
         default:
           # code...
+          $this->create_table();
+          $this->dry_run();
           break;
       }
     }
