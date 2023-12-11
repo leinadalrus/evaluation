@@ -11,8 +11,10 @@ function foobar()
       printf($foo . $newlines);
     else if ($index % 5 == 0)
       printf($bar . $newlines);
-    else
+    else if ($index % 3 == 0 && $index % 5 == 0)
       printf($foo . $bar . $newlines);
+    else
+      echo $index;
   }
 }
 

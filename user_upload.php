@@ -216,8 +216,6 @@ class CliBuilder
 
         default:
           # code...
-          $this->create_table();
-          $this->dry_run();
           break;
       }
     }
